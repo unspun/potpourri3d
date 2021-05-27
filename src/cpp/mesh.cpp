@@ -211,6 +211,39 @@ public:
     return out;
   }
 
+  DenseMatrix<double> shorten_path(Vector<int64_t> vSeq) {
+    std::vector<Halfedge> halfedges;
+    size_t end = vSeq.size() - 1;
+
+    // do sequential dijkstra
+    for (size_t i = 0; i < end; i++) {
+      std::vector<Halfedge> dijkstraPath = shortestEdgePath(
+        *geom, 
+        mesh->vertex(vSeq[i]), 
+        mesh->vertex(vSeq[(i + 1) % vSeq.size()])
+      );
+      halfedges.insert(halfedges.end(), dijkstraPath.begin(), dijkstraPath.end());
+    }
+
+    // flip edges to shorten path
+    flipNetwork->reinitializePath({halfedges});
+    flipNetwork->iterativeShorten();
+
+    // Extract the path and store it in the vector
+    std::vector<Vector3> path3D = flipNetwork->getPathPolyline3D().front();
+    DenseMatrix<double> out(path3D.size(), 3);
+    for (size_t i = 0; i < path3D.size(); i++) {
+      for (size_t j = 0; j < 3; j++) {
+        out(i, j) = path3D[i][j];
+      }
+    }
+
+    // Be kind, rewind
+    flipNetwork->rewind();
+
+    return out;
+  }
+
 private:
   std::unique_ptr<ManifoldSurfaceMesh> mesh;
   std::unique_ptr<VertexPositionGeometry> geom;
@@ -239,7 +272,8 @@ void bind_mesh(py::module& m) {
 
   py::class_<EdgeFlipGeodesicsManager>(m, "EdgeFlipGeodesicsManager")
         .def(py::init<DenseMatrix<double>, DenseMatrix<int64_t>>())
-        .def("find_geodesic_path", &EdgeFlipGeodesicsManager::find_geodesic_path, py::arg("source_vert"), py::arg("target_vert"));
+        .def("find_geodesic_path", &EdgeFlipGeodesicsManager::find_geodesic_path, py::arg("source_vert"), py::arg("target_vert"))
+        .def("shorten_path", &EdgeFlipGeodesicsManager::shorten_path, py::arg("v_seq"));
 
   //m.def("read_mesh", &read_mesh, "Read a mesh from file.", py::arg("filename"));
 }

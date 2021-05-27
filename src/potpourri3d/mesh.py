@@ -62,6 +62,14 @@ class EdgeFlipGeodesicSolver():
 
     def find_geodesic_path(self, v_start, v_end):
         return self.bound_solver.find_geodesic_path(v_start, v_end)
+
+    def shorten_path(self, v_seq):
+        """ Find a geodesic by shortening a path
+
+        v_seq: list of vertex indices (not necessarily connected) that form the 
+        rough path to shorten, first with dijkstra to connect then with edge flips
+        """
+        return self.bound_solver.shorten_path(v_seq)
     
 
 def cotan_laplacian(V, F, denom_eps=0.):
